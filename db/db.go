@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// DB is the management interface for the standard database handle
 type DB struct {
 	DB        *sql.DB
 	Connector driver.Connector
@@ -17,6 +18,7 @@ type DB struct {
 	ConnMaxIdelTime time.Duration
 }
 
+// New creates a new database object
 func New(connector driver.Connector, options ...func(*DB) error) (*DB, error) {
 	db := &DB{
 		// max 25 cuncurrently connections by default
@@ -48,6 +50,7 @@ func New(connector driver.Connector, options ...func(*DB) error) (*DB, error) {
 	return db, nil
 }
 
+// WithMaxOpenConns is a database option that sets the maximum number of open connections
 func WithMaxOpenConns(conns int) func(*DB) error {
 	return func(db *DB) error {
 		db.MaxOpenConns = conns
@@ -55,6 +58,7 @@ func WithMaxOpenConns(conns int) func(*DB) error {
 	}
 }
 
+// WithMaxIdelConns is a database option that sets the maximum number of idle connections
 func WithMaxIdelConns(conns int) func(*DB) error {
 	return func(db *DB) error {
 		db.MaxIdelConns = conns
@@ -62,6 +66,7 @@ func WithMaxIdelConns(conns int) func(*DB) error {
 	}
 }
 
+// WithConnMaxLifetime is a database option that sets the maximum lifttime of a connection
 func WithConnMaxLifetime(d time.Duration) func(*DB) error {
 	return func(db *DB) error {
 		db.ConnMaxLifetime = d
@@ -69,6 +74,7 @@ func WithConnMaxLifetime(d time.Duration) func(*DB) error {
 	}
 }
 
+// WithConnMaxIdleTime is a database option that sets the maximum idle time of a connection
 func WithConnMaxIdleTime(d time.Duration) func(*DB) error {
 	return func(db *DB) error {
 		db.ConnMaxIdelTime = d
@@ -76,23 +82,28 @@ func WithConnMaxIdleTime(d time.Duration) func(*DB) error {
 	}
 }
 
+// Ping checks if the database is reachable
 func (db *DB) Ping() error {
 	return db.DB.Ping()
 }
 
+// Close closes the database connection
 func (db *DB) Close() {
 	db.DB.Close()
 }
 
+// QueryRow executes a query that is expected to return at most one row.
 func (db *DB) QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row {
 	r := db.DB.QueryRowContext(ctx, query, args...)
 	return r
 }
 
+// Query executes a query that is expected to return rows.
 func (db *DB) Query(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
 	return db.DB.QueryContext(ctx, query, args...)
 }
 
+// WithTransaction executes a function within a transaction
 func (db *DB) WithTransaction(ctx context.Context, fn func(context.Context, *sql.Tx) error) error {
 	var err error
 	var tx *sql.Tx
@@ -122,6 +133,7 @@ func (db *DB) WithTransaction(ctx context.Context, fn func(context.Context, *sql
 	return err
 }
 
+// Exec executes a query within a transaction that doesn't return rows
 func (db *DB) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
 	var res sql.Result
 

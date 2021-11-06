@@ -6,6 +6,7 @@ import (
 	"io"
 )
 
+// New returns a new UUID if creation fails it panics
 func New() string {
 	uuid := make([]byte, 16)
 	n, err := io.ReadFull(rand.Reader, uuid)
