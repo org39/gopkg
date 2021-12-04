@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/sirupsen/logrus"
-	"go.opencensus.io/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func init() {
@@ -37,13 +37,13 @@ func Wrap(logrusEntry *logrus.Entry) *Logger {
 
 // LoggerWithSpan spwan new logger with trace span
 func LoggerWithSpan(ctx context.Context) *Logger {
-	span := trace.FromContext(ctx)
+	span := trace.SpanFromContext(ctx)
 	if span == nil {
 		return Log
 	}
 
-	spanID := span.SpanContext().SpanID.String()
-	traceID := span.SpanContext().TraceID.String()
+	spanID := span.SpanContext().SpanID().String()
+	traceID := span.SpanContext().TraceID().String()
 
 	newLogrus := Log.WithFields(logrus.Fields{
 		"trace": traceID,

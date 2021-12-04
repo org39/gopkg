@@ -3,11 +3,9 @@ package router
 import (
 	"strings"
 
-	"github.com/HatsuneMiku3939/ocecho"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"go.opencensus.io/plugin/ochttp/propagation/b3"
-	"go.opencensus.io/trace"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
 )
 
 // Routable is an interface for objects that can be routable.
@@ -29,25 +27,23 @@ func (r *Router) Attach(d Routable) *Router {
 }
 
 // New creates a new Router.
-func New() (*Router, error) {
+func New(serverName string) (*Router, error) {
 	e := echo.New()
 
-	e.Use(loggerMiddleware())
-	e.Use(middleware.Recover())
-	e.Use(middleware.GzipWithConfig(middleware.DefaultGzipConfig))
-	e.Use(ocecho.OpenCensusMiddleware(
-		ocecho.OpenCensusConfig{
-			Skipper: func(c echo.Context) bool {
+	// tracer middleware is first
+	e.Use(otelecho.Middleware(
+		serverName,
+		otelecho.WithSkipper(
+			func(c echo.Context) bool {
 				// skip healthcheck endpoint
 				return strings.HasPrefix(c.Path(), "/_health")
 			},
-			TraceOptions: ocecho.TraceOptions{
-				IsPublicEndpoint: false,
-				Propagation:      &b3.HTTPFormat{},
-				StartOptions:     trace.StartOptions{},
-			},
-		},
+		),
 	))
+
+	// any usefule middleware can be added here
+	e.Use(middleware.Recover())
+	e.Use(middleware.GzipWithConfig(middleware.DefaultGzipConfig))
 
 	e.HideBanner = true
 	return wrap(e), nil
@@ -55,4 +51,12 @@ func New() (*Router, error) {
 
 func wrap(e *echo.Echo) *Router {
 	return &Router{e}
+}
+
+// Start starts the Router.
+func (r *Router) Start(address string) error {
+	// logger middleware is alwyas last
+	r.Echo.Use(loggerMiddleware())
+
+	return r.Echo.Start(address)
 }
