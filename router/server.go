@@ -55,7 +55,7 @@ func wrap(e *echo.Echo) *Router {
 
 // Start starts the Router.
 func (r *Router) Start(address string) error {
-	// logger middleware is alwyas last
+	// logger middleware is always last
 	r.Echo.Use(loggerMiddleware())
 
 	return r.Echo.Start(address)
