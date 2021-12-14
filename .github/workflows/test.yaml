@@ -39,6 +39,9 @@ jobs:
     - name: Download go module
       run: go mod download
 
+    - name: Build tools for go module caching
+      run: make tools
+
   test:
     name: Unit Testing
     runs-on: ubuntu-latest
