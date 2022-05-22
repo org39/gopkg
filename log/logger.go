@@ -20,6 +20,9 @@ func init() {
 
 	// Only log the debug severity or above.
 	logrus.SetLevel(logrus.DebugLevel)
+
+	// Report callers from all packages
+	logrus.SetReportCaller(true)
 }
 
 // Logger implements log.Logger
