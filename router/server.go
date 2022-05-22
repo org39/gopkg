@@ -46,11 +46,8 @@ func New(serverName string) (*Router, error) {
 	e.Use(middleware.GzipWithConfig(middleware.DefaultGzipConfig))
 
 	e.HideBanner = true
+	e.HidePort = true
 	return wrap(e), nil
-}
-
-func wrap(e *echo.Echo) *Router {
-	return &Router{e}
 }
 
 // Start starts the Router.
@@ -59,4 +56,8 @@ func (r *Router) Start(address string) error {
 	r.Echo.Use(loggerMiddleware())
 
 	return r.Echo.Start(address)
+}
+
+func wrap(e *echo.Echo) *Router {
+	return &Router{e}
 }
