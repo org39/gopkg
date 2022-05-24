@@ -12,9 +12,13 @@ type DB struct {
 	DB        *sql.DB
 	Connector driver.Connector
 
-	MaxOpenConns    int
-	MaxIdelConns    int
+	// MaxOpenConns is the maximum number of open connections to the database.
+	MaxOpenConns int
+	// MaxIdelConns is the maximum number of connections in the idle connection pool.
+	MaxIdelConns int
+	// ConnMaxLifetime is the maximum lifetime of a connection.
 	ConnMaxLifetime time.Duration
+	// ConnMaxIdelTime is the maximum lifetime of an idle connection.
 	ConnMaxIdelTime time.Duration
 }
 
@@ -94,17 +98,35 @@ func (db *DB) Close() {
 
 // QueryRow executes a query that is expected to return at most one row.
 func (db *DB) QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row {
+	// if transaction is already started then use it
+	if tx, ok := ctx.Value(txKey).(*sql.Tx); ok {
+		return tx.QueryRowContext(ctx, query, args...)
+	}
+
+	// otherwise query row without transaction
 	r := db.DB.QueryRowContext(ctx, query, args...)
 	return r
 }
 
 // Query executes a query that is expected to return rows.
 func (db *DB) Query(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
+	// if transaction is already started then use it
+	if tx, ok := ctx.Value(txKey).(*sql.Tx); ok {
+		return tx.QueryContext(ctx, query, args...)
+	}
+
+	// otherwise query row without transaction
 	return db.DB.QueryContext(ctx, query, args...)
 }
 
 // WithTransaction executes a function within a transaction
-func (db *DB) WithTransaction(ctx context.Context, fn func(context.Context, *sql.Tx) error) error {
+func (db *DB) WithTransaction(ctx context.Context, fn func(context.Context) error) error {
+	// if transaction is already started then use it
+	if _, ok := ctx.Value(txKey).(*sql.Tx); ok {
+		return fn(ctx)
+	}
+
+	// otherwise start a transaction
 	var err error
 	var tx *sql.Tx
 
@@ -113,6 +135,7 @@ func (db *DB) WithTransaction(ctx context.Context, fn func(context.Context, *sql
 		return err
 	}
 
+	// defer rollback if any error occurs
 	defer func() {
 		p := recover()
 		switch {
@@ -129,7 +152,14 @@ func (db *DB) WithTransaction(ctx context.Context, fn func(context.Context, *sql
 		}
 	}()
 
-	err = fn(ctx, tx)
+	// create a new context with the transaction
+	txCtx := context.WithValue(ctx, txKey, tx)
+
+	// execute the callback with the transaction context
+	err = fn(txCtx)
+
+	// return the error from the callback
+	// if there was an error then the transaction will be rolled back
 	return err
 }
 
@@ -137,10 +167,16 @@ func (db *DB) WithTransaction(ctx context.Context, fn func(context.Context, *sql
 func (db *DB) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
 	var res sql.Result
 
-	err := db.WithTransaction(ctx, func(ctx context.Context, tx *sql.Tx) error {
-		var e error
-		res, e = tx.ExecContext(ctx, query, args...)
-		return e
+	err := db.WithTransaction(ctx, func(ctx context.Context) error {
+		// extract the transaction from the context
+		if tx, ok := ctx.Value(txKey).(*sql.Tx); ok {
+			var e error
+			res, e = tx.ExecContext(ctx, query, args...)
+			return e
+		}
+
+		// transaction should be found in the context
+		panic("DB: transaction not found")
 	})
 
 	return res, err
