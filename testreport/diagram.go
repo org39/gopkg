@@ -23,23 +23,23 @@ type (
 	htmlTemplateModel struct {
 		Title          string
 		SubTitle       string
-		StatusCode     int
 		BadgeClass     string
-		LogEntries     []logEntry
 		WebSequenceDSL string
+		LogEntries     []logEntry
+		StatusCode     int
 	}
 
 	logEntry struct {
+		Timestamp time.Time
 		Header    string
 		Body      string
-		Timestamp time.Time
 	}
 
 	// SequenceDiagramFormatter implementation of a ReportFormatter
 	SequenceDiagramFormatter struct {
-		storagePath      string
 		fs               fileSystem
 		internalRecorder *apitest.Recorder
+		storagePath      string
 	}
 
 	fileSystem interface {

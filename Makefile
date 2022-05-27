@@ -35,21 +35,21 @@ lint: $(TOOLS_DIR)/golangci-lint gen
 .PHONY: test
 test: gen
 	@echo SMALL TEST
-	@go test -test.short ./...
+	@go test -v -test.short -shuffle=on -race ./...
 	@printf "SMALL TEST... \033[0;32m [OK] \033[0m\n"
 
 ## test/medium: Run medium test
 test/medium: gen
 	@echo MEDIUM TEST
 	@rm -rf test/report
-	@go test ./...
+	@go test -v -shuffle=on -race ./...
 	@printf "MEDIUM TEST... \033[0;32m [OK] \033[0m\n"
 
 ## test/coverage: Run small test and generate coverage report
 .PHONY: test/coverage
 test/coverage:
 	@rm -rf test/apitest
-	@go test -test.short ./... -coverprofile=coverage.txt -covermode=atomic
+	@go test -v -test.short -shuffle=on -race ./... -coverprofile=coverage.txt -covermode=atomic
 	@go tool cover -html=coverage.txt -o coverage.html
 
 ## gen: Run all code generator

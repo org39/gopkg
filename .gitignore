@@ -6,3 +6,7 @@ mocks
 bin
 test/report
 .vscode
+gg*
+tmp
+**.pprof
+**.out

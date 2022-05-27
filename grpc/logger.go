@@ -20,7 +20,12 @@ const (
 )
 
 func streamServerLogInterceptor() grpcsdk.StreamServerInterceptor {
-	return func(srv interface{}, stream grpcsdk.ServerStream, info *grpcsdk.StreamServerInfo, handler grpcsdk.StreamHandler) error {
+	return func(
+		srv interface{},
+		stream grpcsdk.ServerStream,
+		info *grpcsdk.StreamServerInfo,
+		handler grpcsdk.StreamHandler,
+	) error {
 		ctx := stream.Context()
 		startTime := time.Now()
 		deadline, deadlineIsSet := ctx.Deadline()
@@ -34,6 +39,11 @@ func streamServerLogInterceptor() grpcsdk.StreamServerInterceptor {
 		service := path.Dir(info.FullMethod)[1:]
 		method := path.Base(info.FullMethod)
 		duration := time.Since(startTime)
+
+		// skip logging for grpc.health.v1.Health service
+		if service == "grpc.health.v1.Health" {
+			return err
+		}
 
 		traceLogger := log.LoggerWithSpan(ctx)
 		accessLog := traceLogger.WithFields(logrus.Fields{
@@ -58,7 +68,12 @@ func streamServerLogInterceptor() grpcsdk.StreamServerInterceptor {
 }
 
 func unaryServerLogInterceptor() grpcsdk.UnaryServerInterceptor {
-	return func(ctx context.Context, req interface{}, info *grpcsdk.UnaryServerInfo, handler grpcsdk.UnaryHandler) (interface{}, error) {
+	return func(
+		ctx context.Context,
+		req interface{},
+		info *grpcsdk.UnaryServerInfo,
+		handler grpcsdk.UnaryHandler,
+	) (interface{}, error) {
 		startTime := time.Now()
 		deadline, deadlineIsSet := ctx.Deadline()
 
@@ -68,6 +83,11 @@ func unaryServerLogInterceptor() grpcsdk.UnaryServerInterceptor {
 		service := path.Dir(info.FullMethod)[1:]
 		method := path.Base(info.FullMethod)
 		duration := time.Since(startTime)
+
+		// skip logging for grpc.health.v1.Health service
+		if service == "grpc.health.v1.Health" {
+			return resp, err
+		}
 
 		traceLogger := log.LoggerWithSpan(ctx)
 		accessLog := traceLogger.WithFields(logrus.Fields{

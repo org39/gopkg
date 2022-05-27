@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
+	"errors"
+	"fmt"
 	"time"
 )
 
@@ -135,32 +137,69 @@ func (db *DB) WithTransaction(ctx context.Context, fn func(context.Context) erro
 		return err
 	}
 
-	// defer rollback if any error occurs
-	defer func() {
-		p := recover()
-		switch {
-		case p != nil:
-			// a panic occurred, rollback and repanic
-			err = tx.Rollback()
-			panic(p)
-		case err != nil:
-			// something went wrong, rollback
-			err = tx.Rollback()
-		default:
-			// all good, commit
-			err = tx.Commit()
-		}
-	}()
-
 	// create a new context with the transaction
 	txCtx := context.WithValue(ctx, txKey, tx)
 
-	// execute the callback with the transaction context
-	err = fn(txCtx)
+	// execute callback in background
+	pch, ech := doTx(txCtx, fn)
 
-	// return the error from the callback
-	// if there was an error then the transaction will be rolled back
-	return err
+	// wait for the callback to finish or context cancled
+	select {
+	case <-ctx.Done():
+		// if the parent context is cancled
+		// double check if the rollback is called
+		if rerr := tx.Rollback(); rerr != nil {
+			if errors.Is(rerr, sql.ErrTxDone) {
+				// ignore this error
+			} else {
+				return fmt.Errorf("%s: %w", rerr, ctx.Err())
+			}
+		}
+
+		return ctx.Err()
+	case r, ok := <-pch:
+		if ok {
+			// if the callback has panic
+			// rollback the transaction and repanic
+			if rerr := tx.Rollback(); rerr != nil {
+				if errors.Is(rerr, sql.ErrTxDone) {
+					// ignore this error
+				} else {
+					panic(fmt.Sprintf("%s: %v", rerr, r))
+				}
+			}
+			panic(r)
+		}
+	case ferr, ok := <-ech:
+		switch {
+		case ok && ferr != nil:
+			// if the callback finished with error
+			// rollback the transaction and return the error
+			if rerr := tx.Rollback(); rerr != nil {
+				if errors.Is(rerr, sql.ErrTxDone) {
+					// ignore this error
+				} else {
+					return fmt.Errorf("%v: %w", ferr, rerr)
+				}
+			}
+			return ferr
+		case ok && ferr == nil:
+			// if the callback finished without error
+			// commit the transaction and return the error
+			return tx.Commit()
+		}
+	}
+
+	// something went wrong, we should never reach here
+	// try to rollback the transaction, and panic
+	if rerr := tx.Rollback(); rerr != nil {
+		if errors.Is(rerr, sql.ErrTxDone) {
+			// ignore this error
+		} else {
+			panic(fmt.Sprintf("%s: db(trx): something went wrong", rerr))
+		}
+	}
+	panic("db(trx): something went wrong")
 }
 
 // Exec executes a query within a transaction that doesn't return rows
@@ -170,9 +209,9 @@ func (db *DB) Exec(ctx context.Context, query string, args ...interface{}) (sql.
 	err := db.WithTransaction(ctx, func(ctx context.Context) error {
 		// extract the transaction from the context
 		if tx, ok := ctx.Value(txKey).(*sql.Tx); ok {
-			var e error
-			res, e = tx.ExecContext(ctx, query, args...)
-			return e
+			var eerr error
+			res, eerr = tx.ExecContext(ctx, query, args...)
+			return eerr
 		}
 
 		// transaction should be found in the context
