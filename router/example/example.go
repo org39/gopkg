@@ -81,7 +81,7 @@ func (h *HelloWorldService) Hello() echo.HandlerFunc {
 		ctx, span := Tracer.Start(c.Request().Context(), "hello")
 		defer span.End()
 
-		log.LoggerWithSpan(ctx).WithField("name", h.Name).Info("Hello")
+		log.LoggerWithSpan(ctx).WithFild("name", h.Name).Info("Hello")
 		return c.String(200, fmt.Sprintf("Hello %s Service", h.Name))
 	}
 }

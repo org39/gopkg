@@ -57,6 +57,8 @@ linters-settings:
   govet:
     # report about shadowed variables
     check-shadowing: true
+    # enable all analyzers
+    enable-all: true
   gocyclo:
     # minimal code complexity to report, 30 by default
     min-complexity: 30

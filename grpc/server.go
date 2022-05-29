@@ -68,6 +68,10 @@ func NewServer(serverName string, options *ServerOptions) (*Server, error) {
 
 	// create grpc server
 	grpcServer := grpcsdk.NewServer(opts...)
+
+	// mount healthcheck service
+	mountHealthCheck(grpcServer)
+
 	s := &Server{
 		Server:   grpcServer,
 		Listener: listener,

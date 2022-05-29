@@ -6,9 +6,13 @@ import (
 	"io"
 )
 
+const (
+	size = 16
+)
+
 // New returns a new UUID if creation fails it panics
 func New() (string, error) {
-	uuid := make([]byte, 16)
+	uuid := make([]byte, size)
 	n, err := io.ReadFull(rand.Reader, uuid)
 	if n != len(uuid) || err != nil {
 		return "", err
