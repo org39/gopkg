@@ -46,8 +46,8 @@ func New(serverName string) (*Router, error) {
 	e.Use(middleware.GzipWithConfig(middleware.DefaultGzipConfig))
 
 	// hide banner
-	e.HideBanner = true
-	e.HidePort = true
+	e.HideBanner = false
+	e.HidePort = false
 	return wrap(e), nil
 }
 
