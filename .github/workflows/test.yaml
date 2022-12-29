@@ -83,7 +83,7 @@ jobs:
       if: env.FOUND_DOCKER_COMPOSE == 'FOUND'
 
     - name: Export Environment Variables
-      uses: HatsuneMiku3939/direnv-action@v1
+      uses: HatsuneMiku3939/direnv-action@master
       if: env.FOUND_DIRENV_FILE == 'FOUND'
 
     - name: Test
@@ -114,7 +114,7 @@ jobs:
       run: echo "FOUND_DIRENV_FILE=$(test -f $DIRENV_FILE && echo FOUND || echo NOT_FOUND)" >> $GITHUB_ENV
 
     - name: Export Environment Variables
-      uses: HatsuneMiku3939/direnv-action@v1
+      uses: HatsuneMiku3939/direnv-action@master
       if: env.FOUND_DIRENV_FILE == 'FOUND'
 
     - name: Lint
