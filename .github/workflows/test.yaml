@@ -33,7 +33,7 @@ jobs:
       run: echo "FOUND_DIRENV_FILE=$(test -f $DIRENV_FILE && echo FOUND || echo NOT_FOUND)" >> $GITHUB_ENV
 
     - name: Export Environment Variables
-      uses: HatsuneMiku3939/direnv-action@master
+      uses: HatsuneMiku3939/direnv-action@v1
       if: env.FOUND_DIRENV_FILE == 'FOUND'
 
     - name: Download go module
